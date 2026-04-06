@@ -29,7 +29,8 @@ class InventoryManager:
             self.categories[category] = []
         self.categories[category].append(product_id)
 
-        self._rebuild_restock_queue()
+        if quantity < self.restock_threshold:
+            heapq.heappush(self.restock_queue, (quantity, product_id))
 
     def update_quantity(self, product_id, new_quantity):
         if product_id not in self.products:
@@ -39,7 +40,9 @@ class InventoryManager:
             raise ValueError("Quantity cannot be negative.")
 
         self.products[product_id]["quantity"] = new_quantity
-        self._rebuild_restock_queue()
+
+        if new_quantity < self.restock_threshold:
+            heapq.heappush(self.restock_queue, (new_quantity, product_id))
 
     def search_product(self, product_id):
         return self.products.get(product_id, None)
@@ -49,19 +52,24 @@ class InventoryManager:
         return [self.products[pid] | {"product_id": pid} for pid in product_ids]
 
     def get_next_restock_item(self):
-        if not self.restock_queue:
-            return None
+        while self.restock_queue:
+            quantity, product_id = heapq.heappop(self.restock_queue)
 
-        quantity, product_id = heapq.heappop(self.restock_queue)
-        product = self.products[product_id]
+            if (
+                product_id in self.products
+                and self.products[product_id]["quantity"] == quantity
+                and quantity < self.restock_threshold
+            ):
+                product = self.products[product_id]
+                return {
+                    "product_id": product_id,
+                    "name": product["name"],
+                    "quantity": quantity,
+                    "price": product["price"],
+                    "category": product["category"]
+                }
 
-        return {
-            "product_id": product_id,
-            "name": product["name"],
-            "quantity": quantity,
-            "price": product["price"],
-            "category": product["category"]
-        }
+        return None
 
     def delete_product(self, product_id):
         if product_id not in self.products:
@@ -76,8 +84,6 @@ class InventoryManager:
             if not self.categories[category]:
                 del self.categories[category]
 
-        self._rebuild_restock_queue()
-
     def display_all_products(self):
         all_products = []
         for product_id, details in self.products.items():
@@ -85,15 +91,3 @@ class InventoryManager:
             row.update(details)
             all_products.append(row)
         return all_products
-
-    def _rebuild_restock_queue(self):
-        self.restock_queue = []
-
-        for product_id, details in self.products.items():
-            if details["quantity"] < self.restock_threshold:
-                heapq.heappush(
-                    self.restock_queue,
-                    (details["quantity"], product_id)
-                )
-if __name__ == "__main__":
-    print("InventoryManager module loaded successfully.")
