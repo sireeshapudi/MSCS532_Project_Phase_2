@@ -27,3 +27,10 @@ python demo_inventory.py
 python inventory_manager.py
 python -m unittest test_inventory.py
 
+
+## Phase 3 Enhancements
+The project was further improved by optimizing the restock retrieval logic to ignore outdated priority queue entries. A new performance testing script was also added to evaluate how the system behaves with larger datasets.
+
+## Run Performance Test
+```bash
+python performance_test.py
